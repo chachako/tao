@@ -14,7 +14,7 @@ use std::{
 
 use gdk::{WindowEdge, WindowState};
 use glib::translate::ToGlibPtr;
-use gtk::{prelude::*, traits::SettingsExt, Settings};
+use gtk::{prelude::*, Settings};
 use raw_window_handle::{
   RawDisplayHandle, RawWindowHandle, WaylandDisplayHandle, WaylandWindowHandle, XlibDisplayHandle,
   XlibWindowHandle,
@@ -67,6 +67,7 @@ pub struct Window {
   inner_size_constraints: RefCell<WindowSizeConstraints>,
   /// Draw event Sender
   draw_tx: crossbeam_channel::Sender<WindowId>,
+  preferred_theme: Option<Theme>,
 }
 
 impl Window {
@@ -183,15 +184,13 @@ impl Window {
       window.set_icon(Some(&icon.inner.into()));
     }
 
-    let settings = Settings::default();
-
-    if let Some(settings) = settings {
+    let preferred_theme = if let Some(settings) = Settings::default() {
       if let Some(preferred_theme) = attributes.preferred_theme {
         match preferred_theme {
           Theme::Dark => settings.set_gtk_application_prefer_dark_theme(true),
           Theme::Light => {
-            let theme_name = settings.gtk_theme_name().map(|t| t.as_str().to_owned());
-            if let Some(theme) = theme_name {
+            if let Some(theme) = settings.gtk_theme_name() {
+              let theme = theme.as_str();
               // Remove dark variant.
               if let Some(theme) = GTK_THEME_SUFFIX_LIST
                 .iter()
@@ -204,7 +203,10 @@ impl Window {
           }
         }
       }
-    }
+      attributes.preferred_theme
+    } else {
+      None
+    };
 
     if attributes.visible {
       window.show_all();
@@ -226,7 +228,7 @@ impl Window {
           window.set_accept_focus(true);
           window.disconnect(id);
         }
-        Inhibit(false)
+        glib::Propagation::Proceed
       });
       signal_id.borrow_mut().replace(id);
     }
@@ -261,7 +263,7 @@ impl Window {
       let state = event.new_window_state();
       max_clone.store(state.contains(WindowState::MAXIMIZED), Ordering::Release);
       minimized_clone.store(state.contains(WindowState::ICONIFIED), Ordering::Release);
-      Inhibit(false)
+      glib::Propagation::Proceed
     });
 
     let scale_factor: Rc<AtomicI32> = Rc::new(win_scale_factor.into());
@@ -303,6 +305,7 @@ impl Window {
       minimized,
       fullscreen: RefCell::new(attributes.fullscreen),
       inner_size_constraints: RefCell::new(attributes.inner_size_constraints),
+      preferred_theme,
     };
 
     win.set_skip_taskbar(pl_attribs.skip_taskbar);
@@ -385,11 +388,11 @@ impl Window {
     .to_physical(self.scale_factor.load(Ordering::Acquire) as f64)
   }
 
-  fn set_size_constraints(&self) {
-    if let Err(e) = self.window_requests_tx.send((
-      self.window_id,
-      WindowRequest::SizeConstraints(*self.inner_size_constraints.borrow()),
-    )) {
+  fn set_size_constraints(&self, constraints: WindowSizeConstraints) {
+    if let Err(e) = self
+      .window_requests_tx
+      .send((self.window_id, WindowRequest::SizeConstraints(constraints)))
+    {
       log::warn!("Fail to send size constraint request: {}", e);
     }
   }
@@ -398,19 +401,19 @@ impl Window {
     let mut size_constraints = self.inner_size_constraints.borrow_mut();
     size_constraints.min_width = size.map(|s| s.width());
     size_constraints.min_height = size.map(|s| s.height());
-    self.set_size_constraints()
+    self.set_size_constraints(*size_constraints)
   }
 
   pub fn set_max_inner_size(&self, size: Option<Size>) {
     let mut size_constraints = self.inner_size_constraints.borrow_mut();
     size_constraints.max_width = size.map(|s| s.width());
     size_constraints.max_height = size.map(|s| s.height());
-    self.set_size_constraints()
+    self.set_size_constraints(*size_constraints)
   }
 
   pub fn set_inner_size_constraints(&self, constraints: WindowSizeConstraints) {
     *self.inner_size_constraints.borrow_mut() = constraints;
-    self.set_size_constraints()
+    self.set_size_constraints(constraints)
   }
 
   pub fn set_title(&self, title: &str) {
@@ -675,11 +678,12 @@ impl Window {
     let monitor = self
       .window
       .window()
-      .map(|window| display.monitor_at_window(&window))
-      .unwrap_or_else(|| display.primary_monitor())
-      .unwrap();
-    let handle = MonitorHandle { monitor };
-    Some(RootMonitorHandle { inner: handle })
+      .and_then(|window| display.monitor_at_window(&window))
+      .or_else(|| display.primary_monitor());
+
+    monitor.map(|monitor| RootMonitorHandle {
+      inner: MonitorHandle { monitor },
+    })
   }
 
   #[inline]
@@ -773,15 +777,18 @@ impl Window {
   }
 
   pub fn theme(&self) -> Theme {
-    if let Some(settings) = Settings::default() {
-      let theme_name = settings.gtk_theme_name().map(|s| s.as_str().to_owned());
-      if let Some(theme) = theme_name {
-        if GTK_THEME_SUFFIX_LIST.iter().any(|t| theme.ends_with(t)) {
-          return Theme::Dark;
-        }
+    if let Some(theme) = self.preferred_theme {
+      return theme;
+    }
+
+    if let Some(theme) = Settings::default().and_then(|s| s.gtk_theme_name()) {
+      let theme = theme.as_str();
+      if GTK_THEME_SUFFIX_LIST.iter().any(|t| theme.ends_with(t)) {
+        return Theme::Dark;
       }
     }
-    return Theme::Light;
+
+    Theme::Light
   }
 }
 
