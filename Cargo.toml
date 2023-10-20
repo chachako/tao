@@ -1,6 +1,6 @@
 [package]
 name = "tao"
-version = "0.22.2"
+version = "0.23.0"
 description = "Cross-platform window manager library."
 authors = [
   "Tauri Programme within The Commons Conservancy",
@@ -64,11 +64,11 @@ tao-macros = { version = "0.1.0", path = "./tao-macros" }
 objc = "0.2"
 
 [target."cfg(target_os = \"macos\")".dependencies]
-cocoa = "0.24"
+cocoa = "0.25"
 core-foundation = "0.9"
-core-graphics = "0.22"
+core-graphics = "0.23"
 dispatch = "0.2"
-scopeguard = "1.1"
+scopeguard = "1.2"
 png = "0.17"
 
 [target."cfg(target_os = \"windows\")".dependencies]
@@ -122,6 +122,6 @@ gdkwayland-sys = "0.18.0"
 gdk-pixbuf = "0.18"
 x11-dl = "2.21"
 zbus = "3"
-uuid = { version = "1.3", features = [ "v4" ] }
+uuid = { version = "1.5", features = [ "v4" ] }
 png = "0.17"
 parking_lot = "0.12"
