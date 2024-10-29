@@ -345,15 +345,15 @@ pub(super) fn set_ns_theme(theme: Option<Theme>) {
     let app: id = msg_send![app_class, sharedApplication];
     let has_theme: BOOL = msg_send![app, respondsToSelector: sel!(effectiveAppearance)];
     if has_theme == YES {
-      let name = if let Some(theme) = theme {
-        NSString::alloc(nil).init_str(match theme {
+      let appearance = if let Some(theme) = theme {
+        let name = NSString::alloc(nil).init_str(match theme {
           Theme::Dark => "NSAppearanceNameDarkAqua",
           Theme::Light => "NSAppearanceNameAqua",
-        })
+        });
+        msg_send![class!(NSAppearance), appearanceNamed: name]
       } else {
         nil
       };
-      let appearance: id = msg_send![class!(NSAppearance), appearanceNamed: name];
       let _: () = msg_send![app, setAppearance: appearance];
     }
   }
@@ -459,6 +459,7 @@ pub struct UnownedWindow {
   pub shared_state: Arc<Mutex<SharedState>>,
   decorations: AtomicBool,
   cursor_state: Weak<Mutex<CursorState>>,
+  transparent: bool,
   pub inner_rect: Option<PhysicalSize<u32>>,
 }
 
@@ -500,7 +501,22 @@ impl UnownedWindow {
     unsafe {
       if win_attribs.transparent {
         ns_window.setOpaque_(NO);
-        ns_window.setBackgroundColor_(NSColor::clearColor(nil));
+      }
+
+      if win_attribs.transparent || win_attribs.background_color.is_some() {
+        let color = win_attribs
+          .background_color
+          .map(|(r, g, b, a)| {
+            NSColor::colorWithRed_green_blue_alpha_(
+              nil,
+              r as f64,
+              g as f64,
+              b as f64,
+              a as f64 / 255.0,
+            )
+          })
+          .unwrap_or_else(|| NSColor::clearColor(nil));
+        ns_window.setBackgroundColor_(color);
       }
 
       if win_attribs.inner_size_constraints.has_min() {
@@ -530,6 +546,7 @@ impl UnownedWindow {
     // `WindowDelegate` to update the state.
     let fullscreen = win_attribs.fullscreen.take();
     let maximized = win_attribs.maximized;
+    let transparent = win_attribs.transparent;
     let visible = win_attribs.visible;
     let focused = win_attribs.focused;
     let decorations = win_attribs.decorations;
@@ -548,6 +565,7 @@ impl UnownedWindow {
       decorations: AtomicBool::new(decorations),
       cursor_state,
       inner_rect,
+      transparent,
     });
 
     match cloned_preferred_theme {
@@ -846,6 +864,30 @@ impl UnownedWindow {
       .map_err(|e| ExternalError::Os(os_error!(OsError::CGError(e))))?;
 
     Ok(())
+  }
+
+  #[inline]
+  pub fn set_background_color(&self, color: Option<crate::window::RGBA>) {
+    unsafe {
+      let color = color
+        .map(|(r, g, b, a)| {
+          NSColor::colorWithRed_green_blue_alpha_(
+            nil,
+            r as f64,
+            g as f64,
+            b as f64,
+            a as f64 / 255.0,
+          )
+        })
+        .unwrap_or_else(|| {
+          if self.transparent {
+            NSColor::clearColor(nil)
+          } else {
+            nil
+          }
+        });
+      self.ns_window.setBackgroundColor_(color);
+    }
   }
 
   #[inline]
