@@ -1,5 +1,23 @@
 # Changelog
 
+## \[0.30.7]
+
+- [`97382238`](https://github.com/tauri-apps/tao/commit/97382238b218d66baf5693b6087b7bef2e66ec70) ([#1007](https://github.com/tauri-apps/tao/pull/1007) by [@amrbashir](https://github.com/tauri-apps/tao/../../amrbashir)) On Windows, fix `Window::set_inner_size` regression not handling borders correctly for undecorated window with shadows.
+- [`97382238`](https://github.com/tauri-apps/tao/commit/97382238b218d66baf5693b6087b7bef2e66ec70) ([#1007](https://github.com/tauri-apps/tao/pull/1007) by [@amrbashir](https://github.com/tauri-apps/tao/../../amrbashir)) On Windows, fix `Window::inner_size` regression returning incorrect size for window with decorations.
+
+## \[0.30.6]
+
+- [`1f72c246`](https://github.com/tauri-apps/tao/commit/1f72c2465edcc9bee9170bcfd74d4e917e48febc) ([#1002](https://github.com/tauri-apps/tao/pull/1002) by [@ahqsoftwares](https://github.com/tauri-apps/tao/../../ahqsoftwares)) Add `WindowExtUnix::set_badge_count` for Linux, `WindowExtIos::set_badge_count` for iOS, `WindowExtMacos::set_badge_label` for Macos, `MacdowExtWindows::set_overlay_icon` for Windows
+- [`946f8049`](https://github.com/tauri-apps/tao/commit/946f804995208fd9796d6baee828392c4ce2056b) ([#1005](https://github.com/tauri-apps/tao/pull/1005) by [@lucasfernog](https://github.com/tauri-apps/tao/../../lucasfernog)) Fix memory leak on Android.
+- [`aff33fbb`](https://github.com/tauri-apps/tao/commit/aff33fbb2dab66cca2481fb75a3a6d612689269c) ([#1001](https://github.com/tauri-apps/tao/pull/1001) by [@amrbashir](https://github.com/tauri-apps/tao/../../amrbashir)) On Linux, `Window::outer_position`, `Window::outer_size` and `WindowEvent::Moved` to include/account for borders and titlebar.
+- [`06d109fe`](https://github.com/tauri-apps/tao/commit/06d109feb3fd0f77004c8c576fc1e54e7e82f867) ([#993](https://github.com/tauri-apps/tao/pull/993) by [@amrbashir](https://github.com/tauri-apps/tao/../../amrbashir)) On Windows, fix `Window::inner_size` returns slightly larger than what's visible for undecorated windows but have shadows.
+- [`edfbd364`](https://github.com/tauri-apps/tao/commit/edfbd364a6abf8704de53a31ab10d0ce595cbde7) ([#992](https://github.com/tauri-apps/tao/pull/992) by [@amrbashir](https://github.com/tauri-apps/tao/../../amrbashir)) On Windows, fix `WindowBuilder::with_position` with a position on a non-primary monitor resulting in an incorrectly positioned window.
+
+## \[0.30.5]
+
+- [`532b5ab0`](https://github.com/tauri-apps/tao/commit/532b5ab0bffb1e7b39281951848947feb0716f0a) ([#1000](https://github.com/tauri-apps/tao/pull/1000) by [@amrbashir](https://github.com/tauri-apps/tao/../../amrbashir)) Fix `android_binding` macro incorrect expansion.
+- [`67e44e4c`](https://github.com/tauri-apps/tao/commit/67e44e4cb2d278333abe367f23f0e5ef0d2463db) ([#991](https://github.com/tauri-apps/tao/pull/991) by [@Legend-Master](https://github.com/tauri-apps/tao/../../Legend-Master)) Fix setting theme to `None` crashes the app on macOS
+
 ## \[0.30.4]
 
 - [`b404cde1`](https://github.com/tauri-apps/tao/commit/b404cde150eb767026122691aed2d21f9d6fd051) ([#995](https://github.com/tauri-apps/tao/pull/995) by [@amrbashir](https://github.com/tauri-apps/tao/../../amrbashir)) Add `WindowAttributes::background_color`, `WindowBuilder::with_background_color`, and `Window::set_background_color` APIs to set and change window background color.
